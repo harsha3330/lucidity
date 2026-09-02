@@ -7,8 +7,6 @@
 backend.hcl
 crash.log
 
-sample
-
 # Go
 app/hello
 

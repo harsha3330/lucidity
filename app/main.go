@@ -68,7 +68,7 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", hello(m))
 	mux.HandleFunc("/healthz", health)
-	mux.HandleFunc("/newhello", newhello)
+	mux.HandleFunc("/new-hello", newhello)
 	mux.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
 
 	srv := &http.Server{
