@@ -97,3 +97,4 @@ func main() {
 		logger.Error("shutdown failed", "error", err)
 	}
 }
+
