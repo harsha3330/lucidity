@@ -46,7 +46,7 @@ jobs:
       - name: Assume CI role via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ vars.AWS_CI_ROLE_ARN }}
+          role-to-assume: arn:aws:iam::095728565421:role/lucidity-ci
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to ECR
