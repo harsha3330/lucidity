@@ -46,6 +46,10 @@ func hello(m *metrics) http.HandlerFunc {
 	}
 }
 
+func newhello(w http.ResponseWriter, _ *http.Request) {
+	w.Write([]byte("new hello world\n"))
+}
+
 func health(w http.ResponseWriter, _ *http.Request) {
 	w.Write([]byte("ok\n"))
 }
@@ -64,6 +68,7 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", hello(m))
 	mux.HandleFunc("/healthz", health)
+	mux.HandleFunc("/newhello", newhello)
 	mux.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
 
 	srv := &http.Server{
