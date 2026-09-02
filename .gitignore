@@ -1,0 +1,19 @@
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+backend.hcl
+crash.log
+
+# Go
+app/hello
+
+# Local
+.DS_Store
+
+# Temp
+README.md
+things-to-write.md
+pictures/

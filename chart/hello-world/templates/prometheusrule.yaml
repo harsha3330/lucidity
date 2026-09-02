@@ -1,0 +1,31 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ .Release.Name }}
+spec:
+  groups:
+    - name: {{ .Release.Name }}
+      rules:
+        - alert: HelloWorldAllTargetsMissing
+          expr: absent(up{job="{{ .Release.Name }}"})
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: No hello-world targets are being scraped at all.
+
+        - alert: HelloWorldTargetDown
+          expr: up{job="{{ .Release.Name }}"} == 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: A hello-world pod has been unreachable for 5 minutes.
+
+        - alert: HelloWorldHighLatency
+          expr: histogram_quantile(0.95, sum by (le) (rate(hello_request_duration_seconds_bucket[5m]))) > 0.5
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: p95 latency above 500ms for 10 minutes.

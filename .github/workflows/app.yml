@@ -1,0 +1,73 @@
+name: app
+
+on:
+  pull_request:
+    paths: ["app/**", "chart/**"]
+  push:
+    branches: [main]
+    paths: ["app/**", "chart/**", ".github/workflows/app.yml"]
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  AWS_REGION: ap-south-1
+  CLUSTER_NAME: lucidity
+  ECR_REPOSITORY: lucidity/hello-world
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: app/go.mod
+      - name: Vet and test
+        working-directory: app
+        run: |
+          go vet ./...
+          go test ./...
+      - name: Helm lint
+        run: |
+          helm lint chart/hello-world --set image.repository=x --set image.tag=x
+          helm lint chart/grafana
+
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: test
+    runs-on: ubuntu-latest
+    concurrency: deploy
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Assume CI role via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_CI_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build and push multi-arch image
+        env:
+          IMAGE: ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+        # No QEMU needed: the Dockerfile cross-compiles in a native build
+        # stage; the final stage has no RUN steps.
+        run: docker buildx build --platform linux/amd64,linux/arm64 --push -t "$IMAGE" app/
+
+      - name: Deploy with Helm
+        run: |
+          aws eks update-kubeconfig --name "$CLUSTER_NAME" --region "$AWS_REGION"
+          helm upgrade --install hello-world chart/hello-world \
+            --namespace hello \
+            --set image.repository="${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}" \
+            --set image.tag="${{ github.sha }}" \
+            --wait --timeout 5m
+          helm upgrade --install dashboards chart/grafana \
+            --namespace hello --wait

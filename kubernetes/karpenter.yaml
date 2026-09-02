@@ -1,0 +1,60 @@
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+  name: hello
+spec:
+  amiSelectorTerms:
+    - alias: al2023@latest
+  role: lucidity-karpenter-node
+  subnetSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: lucidity
+  securityGroupSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: lucidity
+---
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: hello
+spec:
+  template:
+    metadata:
+      labels:
+        role: app
+    spec:
+      # Only pods that explicitly tolerate this land on Karpenter nodes.
+      taints:
+        - key: app
+          value: "true"
+          effect: NoSchedule
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: hello
+      requirements:
+        # Image is multi-arch, so Karpenter is free to pick either.
+        - key: kubernetes.io/arch
+          operator: In
+          values: ["amd64", "arm64"]
+        - key: kubernetes.io/os
+          operator: In
+          values: ["linux"]
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: ["spot"]
+        - key: karpenter.k8s.aws/instance-category
+          operator: In
+          values: ["t", "c", "m"]
+        - key: karpenter.k8s.aws/instance-cpu
+          operator: In
+          values: ["2", "4"]
+        # nano/micro can't bootstrap an EKS node - kubelet alone eats 512Mi.
+        - key: karpenter.k8s.aws/instance-memory
+          operator: Gt
+          values: ["1500"]
+  limits:
+    cpu: "16"
+  disruption:
+    consolidationPolicy: WhenEmptyOrUnderutilized
+    consolidateAfter: 1m

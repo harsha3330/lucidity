@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hello-world-dashboard
+  labels:
+    # Grafana's sidecar watches for this label and auto-imports the JSON.
+    grafana_dashboard: "1"
+data:
+  hello-world.json: |-
+    {{- .Files.Get "dashboards/hello-world.json" | nindent 4 }}

@@ -1,0 +1,66 @@
+{
+  "title": "Hello World Service",
+  "uid": "hello-world",
+  "schemaVersion": 39,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Requests / sec",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 0 },
+      "targets": [
+        { "expr": "sum(rate(hello_requests_total[5m]))", "refId": "A", "legendFormat": "req/s" }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "p95 latency",
+      "type": "timeseries",
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 0 },
+      "targets": [
+        { "expr": "histogram_quantile(0.95, sum by (le) (rate(hello_request_duration_seconds_bucket[5m])))", "refId": "A", "legendFormat": "p95" }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Ready pods",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 0 },
+      "targets": [
+        { "expr": "sum(kube_deployment_status_replicas_available{namespace=\"hello\", deployment=\"hello-world\"})", "refId": "A", "legendFormat": "ready" }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Pod CPU (cores)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 },
+      "targets": [
+        { "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"hello\", pod=~\"hello-world.*\", container!=\"\"}[5m])) by (pod)", "refId": "A", "legendFormat": "{{pod}}" }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Pod memory",
+      "type": "timeseries",
+      "fieldConfig": { "defaults": { "unit": "bytes" } },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 8 },
+      "targets": [
+        { "expr": "sum(container_memory_working_set_bytes{namespace=\"hello\", pod=~\"hello-world.*\", container!=\"\"}) by (pod)", "refId": "A", "legendFormat": "{{pod}}" }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Node CPU utilisation",
+      "type": "timeseries",
+      "fieldConfig": { "defaults": { "unit": "percentunit", "max": 1 } },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 8 },
+      "targets": [
+        { "expr": "1 - avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) by (instance)", "refId": "A", "legendFormat": "{{instance}}" }
+      ]
+    }
+  ]
+}

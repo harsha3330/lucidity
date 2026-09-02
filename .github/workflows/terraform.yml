@@ -1,0 +1,29 @@
+name: terraform
+
+on:
+  pull_request:
+    paths: ["terraform/**"]
+  push:
+    branches: [main]
+    paths: ["terraform/**"]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        stack: [00-bootstrap, 01-infra, 02-platform]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.16.0
+      - name: fmt
+        run: terraform -chdir=terraform/${{ matrix.stack }} fmt -check -recursive
+      - name: init (no backend, no credentials needed)
+        run: terraform -chdir=terraform/${{ matrix.stack }} init -backend=false
+      - name: validate
+        run: terraform -chdir=terraform/${{ matrix.stack }} validate
