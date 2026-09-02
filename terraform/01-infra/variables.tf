@@ -48,3 +48,9 @@ variable "public_subnets" {
   type        = list(string)
   default     = ["10.0.2.0/24", "10.0.3.0/24"]
 }
+
+variable "github_repo_id_qualified" {
+  description = "ID-qualified repo subject (owner@user_id/repo@repo_id) from: gh api repos/<owner>/<repo>/actions/oidc/customization/sub"
+  type        = string
+  default     = "harsha3330@105787285/lucidity@1354988421"
+}

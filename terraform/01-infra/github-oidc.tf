@@ -22,7 +22,12 @@ data "aws_iam_policy_document" "ci_trust" {
     condition {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:${var.github_repo}:ref:refs/heads/main"]
+      # GitHub may issue ID-qualified subjects (owner@id/repo@id) - a newer
+      # anti-rename-attack feature. Accept both forms, main branch only.
+      values = [
+        "repo:${var.github_repo}:ref:refs/heads/main",
+        "repo:${var.github_repo_id_qualified}:ref:refs/heads/main",
+      ]
     }
   }
 }
