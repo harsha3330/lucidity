@@ -1,6 +1,7 @@
 name: app
 
 on:
+  workflow_dispatch:
   pull_request:
     paths: ["app/**", "chart/**"]
   push:
