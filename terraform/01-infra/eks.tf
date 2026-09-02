@@ -1,72 +1,50 @@
-resource "aws_iam_openid_connect_provider" "github" {
-  url             = "https://token.actions.githubusercontent.com"
-  client_id_list  = ["sts.amazonaws.com"]
-  thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea1"]
-}
+module "eks" {
+  source  = "terraform-aws-modules/eks/aws"
+  version = "~> 21.0"
 
-data "aws_iam_policy_document" "ci_trust" {
-  statement {
-    actions = ["sts:AssumeRoleWithWebIdentity"]
+  name               = var.name
+  kubernetes_version = var.kubernetes_version
 
-    principals {
-      type        = "Federated"
-      identifiers = [aws_iam_openid_connect_provider.github.arn]
-    }
+  vpc_id     = module.vpc.vpc_id
+  subnet_ids = module.vpc.private_subnets
 
-    condition {
-      test     = "StringEquals"
-      variable = "token.actions.githubusercontent.com:aud"
-      values   = ["sts.amazonaws.com"]
-    }
+  endpoint_public_access       = true
+  endpoint_public_access_cidrs = var.admin_cidrs
 
-    condition {
-      test     = "StringLike"
-      variable = "token.actions.githubusercontent.com:sub"
-      # GitHub may issue ID-qualified subjects (owner@id/repo@id) - a newer
-      # anti-rename-attack feature. Accept both forms, main branch only.
-      values = [
-        "repo:${var.github_repo}:ref:refs/heads/main",
-        "repo:${var.github_repo_id_qualified}:ref:refs/heads/main",
-      ]
+  enable_cluster_creator_admin_permissions = true
+
+  addons = {
+    coredns        = {}
+    kube-proxy     = {}
+    metrics-server = {}
+    vpc-cni        = { before_compute = true }
+  }
+
+  eks_managed_node_groups = {
+    system = {
+      instance_types = ["t3.medium"]
+      min_size       = 2
+      max_size       = 3
+      desired_size   = 2
     }
   }
-}
 
-resource "aws_iam_role" "ci" {
-  name               = "${var.name}-ci"
-  assume_role_policy = data.aws_iam_policy_document.ci_trust.json
-}
-
-data "aws_iam_policy_document" "ci" {
-  statement {
-    sid       = "EcrLogin"
-    actions   = ["ecr:GetAuthorizationToken"]
-    resources = ["*"]
+  node_security_group_tags = {
+    "karpenter.sh/discovery" = var.name
   }
 
-  statement {
-    sid = "EcrPushPull"
-    actions = [
-      "ecr:BatchCheckLayerAvailability",
-      "ecr:BatchGetImage",
-      "ecr:GetDownloadUrlForLayer",
-      "ecr:PutImage",
-      "ecr:InitiateLayerUpload",
-      "ecr:UploadLayerPart",
-      "ecr:CompleteLayerUpload",
-    ]
-    resources = [aws_ecr_repository.hello.arn]
+  access_entries = {
+    ci = {
+      principal_arn = aws_iam_role.ci.arn
+      policy_associations = {
+        edit = {
+          policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSEditPolicy"
+          access_scope = {
+            type       = "namespace"
+            namespaces = ["hello"]
+          }
+        }
+      }
+    }
   }
-
-  statement {
-    sid       = "EksDescribe"
-    actions   = ["eks:DescribeCluster"]
-    resources = [module.eks.cluster_arn]
-  }
-}
-
-resource "aws_iam_role_policy" "ci" {
-  name   = "ci"
-  role   = aws_iam_role.ci.id
-  policy = data.aws_iam_policy_document.ci.json
 }
