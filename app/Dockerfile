@@ -1,5 +1,3 @@
-# Build stage runs on the builder's native arch and cross-compiles Go,
-# so multi-arch builds need no emulation.
 FROM --platform=$BUILDPLATFORM golang:1.25-alpine AS build
 ARG TARGETOS TARGETARCH
 WORKDIR /src

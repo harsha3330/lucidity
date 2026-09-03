@@ -1,7 +1,6 @@
 name: app
 
 on:
-  workflow_dispatch:
   pull_request:
     paths: ["app/**", "chart/**"]
   push:
@@ -40,6 +39,8 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     concurrency: deploy
+    env:
+      TAG: ${{ github.sha }}-${{ github.run_attempt }}
     steps:
       - uses: actions/checkout@v4
 
@@ -57,9 +58,7 @@ jobs:
 
       - name: Build and push multi-arch image
         env:
-          IMAGE: ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
-        # No QEMU needed: the Dockerfile cross-compiles in a native build
-        # stage; the final stage has no RUN steps.
+          IMAGE: ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.TAG }}
         run: docker buildx build --platform linux/amd64,linux/arm64 --push -t "$IMAGE" app/
 
       - name: Deploy with Helm
@@ -68,7 +67,7 @@ jobs:
           helm upgrade --install hello-world chart/hello-world \
             --namespace hello \
             --set image.repository="${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}" \
-            --set image.tag="${{ github.sha }}" \
+            --set image.tag="${{ env.TAG }}" \
             --wait --timeout 5m
           helm upgrade --install dashboards chart/grafana \
             --namespace hello --wait

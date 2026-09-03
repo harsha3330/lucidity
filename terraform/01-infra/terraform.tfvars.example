@@ -1,0 +1,3 @@
+aws_account_id = "09875654321"
+admin_cidrs    = ["233.187.64.89/32"]
+github_repo    = "harsha3330/lucidity"
